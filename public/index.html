@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M365 Service Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+      --space-4: 1rem;    --space-5: 1.25rem; --space-6: 1.5rem;
+      --space-8: 2rem;    --space-10: 2.5rem;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem;
+      --transition: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    [data-theme='dark'] {
+      --color-bg:          #0d1117;
+      --color-surface:     #161b22;
+      --color-surface-2:   #1c2128;
+      --color-border:      #30363d;
+      --color-divider:     #21262d;
+      --color-text:        #e6edf3;
+      --color-text-muted:  #8b949e;
+      --color-text-faint:  #484f58;
+      --color-primary:     #388bfd;
+      --color-primary-dim: #1f3f6e;
+      --color-success:     #3fb950;
+      --color-success-dim: #1a3d24;
+      --color-warning:     #d29922;
+      --color-warning-dim: #3d2f0e;
+      --color-error:       #f85149;
+      --color-error-dim:   #4a1a1a;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    [data-theme='light'] {
+      --color-bg:          #f0f2f5;
+      --color-surface:     #ffffff;
+      --color-surface-2:   #f6f8fa;
+      --color-border:      #d0d7de;
+      --color-divider:     #e4e8ed;
+      --color-text:        #1f2328;
+      --color-text-muted:  #656d76;
+      --color-text-faint:  #9198a1;
+      --color-primary:     #0969da;
+      --color-primary-dim: #ddf4ff;
+      --color-success:     #1a7f37;
+      --color-success-dim: #dafbe1;
+      --color-warning:     #9a6700;
+      --color-warning-dim: #fff8c5;
+      --color-error:       #d1242f;
+      --color-error-dim:   #ffebe9;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; scroll-behavior: smooth; }
+    body { font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-text); background: var(--color-bg); min-height: 100dvh; line-height: 1.6; }
+    button { cursor: pointer; background: none; border: none; font: inherit; color: inherit; }
+    a, button { transition: color var(--transition), background var(--transition), border-color var(--transition), opacity var(--transition); }
+    .app { display: flex; flex-direction: column; min-height: 100dvh; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-6); background: var(--color-surface); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 100; gap: var(--space-4); }
+    .logo { display: flex; align-items: center; gap: var(--space-2); }
+    .logo-text { font-size: var(--text-sm); font-weight: 600; letter-spacing: -0.01em; }
+    .logo-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .header-right { display: flex; align-items: center; gap: var(--space-3); }
+    .refresh-info { font-size: var(--text-xs); color: var(--color-text-muted); font-family: var(--font-mono); display: flex; align-items: center; gap: var(--space-2); }
+    .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); animation: pulse 2s ease-in-out infinite; flex-shrink: 0; }
+    .pulse-dot.error   { background: var(--color-error);   animation: none; }
+    .pulse-dot.loading { background: var(--color-primary); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 500; border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text-muted); white-space: nowrap; }
+    .btn:hover { color: var(--color-text); border-color: var(--color-text-muted); }
+    .theme-toggle { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text-muted); }
+    .theme-toggle:hover { color: var(--color-text); border-color: var(--color-text-muted); }
+
+    /* Main */
+    .main { padding: var(--space-6); max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
+
+    /* Summary */
+    .summary-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-6); }
+    .summary-status { display: flex; align-items: center; gap: var(--space-3); }
+    .status-badge { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-radius: 9999px; font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+    .status-badge.ok      { background: var(--color-success-dim); color: var(--color-success); }
+    .status-badge.warning { background: var(--color-warning-dim); color: var(--color-warning); }
+    .status-badge.error   { background: var(--color-error-dim);   color: var(--color-error); }
+    .status-badge.loading { background: var(--color-surface-2);   color: var(--color-text-muted); border: 1px solid var(--color-border); }
+    .last-updated { font-size: var(--text-xs); color: var(--color-text-faint); font-family: var(--font-mono); }
+
+    /* Progress ring */
+    .progress-ring-wrap { width: 20px; height: 20px; flex-shrink: 0; display: none; }
+    .progress-ring { transform: rotate(-90deg); }
+    .progress-ring-circle { stroke-dasharray: 56.5; stroke-dashoffset: 56.5; stroke: var(--color-primary); transition: stroke-dashoffset 1s linear; fill: none; stroke-linecap: round; }
+    .progress-ring-bg { fill: none; stroke: var(--color-border); }
+
+    /* Filters */
+    .filter-tabs { display: flex; gap: var(--space-1); margin-bottom: var(--space-4); flex-wrap: wrap; }
+    .filter-tab { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 500; color: var(--color-text-muted); border: 1px solid transparent; background: transparent; }
+    .filter-tab:hover { color: var(--color-text); background: var(--color-surface); }
+    .filter-tab.active { color: var(--color-text); background: var(--color-surface); border-color: var(--color-border); }
+
+    /* Service grid */
+    .section-title { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-muted); margin-bottom: var(--space-3); }
+    .service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-8); }
+    .service-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); display: flex; align-items: center; gap: var(--space-3); transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition); }
+    .service-card:hover { border-color: var(--color-text-muted); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    .service-card.warning { border-color: var(--color-warning); }
+    .service-card.error   { border-color: var(--color-error); }
+    .service-icon { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; background: var(--color-surface-2); }
+    .service-info { flex: 1; min-width: 0; }
+    .service-name { font-size: var(--text-xs); font-weight: 600; color: var(--color-text); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .service-status-text { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+    .service-status-text.ok      { color: var(--color-success); }
+    .service-status-text.warning { color: var(--color-warning); }
+    .service-status-text.error   { color: var(--color-error); }
+    .service-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--color-success); }
+    .service-dot.warning { background: var(--color-warning); }
+    .service-dot.error   { background: var(--color-error); animation: blink 1.2s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+
+    /* Incidents */
+    .incidents-section { margin-bottom: var(--space-8); }
+    .incidents-list { display: flex; flex-direction: column; gap: var(--space-3); }
+    .incident-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+    .incident-card.incident { border-left: 3px solid var(--color-error); }
+    .incident-card.advisory { border-left: 3px solid var(--color-warning); }
+    .incident-header { display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-4) var(--space-5); gap: var(--space-4); cursor: pointer; }
+    .incident-header:hover { background: var(--color-surface-2); }
+    .incident-main { flex: 1; min-width: 0; }
+    .incident-top { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-2); }
+    .incident-id { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); background: var(--color-surface-2); padding: 1px var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--color-border); }
+    .type-pill { font-size: var(--text-xs); font-weight: 600; padding: 1px var(--space-2); border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .type-pill.incident { background: var(--color-error-dim); color: var(--color-error); }
+    .type-pill.advisory { background: var(--color-warning-dim); color: var(--color-warning); }
+    .status-pill { font-size: var(--text-xs); font-weight: 500; padding: 1px var(--space-2); border-radius: 9999px; background: var(--color-surface-2); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+    .incident-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); line-height: 1.35; }
+    .incident-service { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-1); }
+    .incident-meta { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex-shrink: 0; }
+    .incident-time { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-faint); }
+    .chevron { color: var(--color-text-faint); transition: transform var(--transition); }
+    .chevron.open { transform: rotate(180deg); }
+    .incident-body { padding: 0 var(--space-5) var(--space-5); border-top: 1px solid var(--color-divider); display: none; }
+    .incident-body.open { display: block; }
+    .incident-updates { margin-top: var(--space-4); }
+    .update-entry { display: flex; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); }
+    .update-entry:last-child { border-bottom: none; }
+    .update-time { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); flex-shrink: 0; width: 140px; padding-top: 2px; }
+    .update-text { font-size: var(--text-xs); color: var(--color-text); line-height: 1.6; }
+
+    /* States */
+    .state-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-10); text-align: center; }
+    .state-icon { font-size: 32px; margin-bottom: var(--space-3); }
+    .state-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-2); }
+    .state-desc { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 42ch; margin: 0 auto; }
+    .skeleton { background: linear-gradient(90deg, var(--color-surface) 0%, var(--color-surface-2) 50%, var(--color-surface) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: var(--radius-md); }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Footer */
+    .footer { padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-divider); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+    .footer-text { font-size: var(--text-xs); color: var(--color-text-faint); }
+    .footer-text a { color: var(--color-primary); text-decoration: none; }
+    .footer-text a:hover { text-decoration: underline; }
+
+    /* Toast */
+    .toast-container { position: fixed; bottom: var(--space-6); right: var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); z-index: 500; }
+    .toast { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-5); font-size: var(--text-xs); box-shadow: var(--shadow-md); max-width: 320px; animation: toastIn 0.3s ease; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .toast.success { border-left: 3px solid var(--color-success); }
+    .toast.error   { border-left: 3px solid var(--color-error); }
+
+    @media (max-width: 640px) {
+      .main { padding: var(--space-4); }
+      .header { padding: var(--space-3) var(--space-4); }
+      .service-grid { grid-template-columns: 1fr 1fr; }
+      .incident-meta { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="M365 Status">
+        <rect width="28" height="28" rx="6" fill="var(--color-primary)"/>
+        <rect x="5" y="5" width="8" height="8" rx="1.5" fill="white" opacity="0.95"/>
+        <rect x="15" y="5" width="8" height="8" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="5" y="15" width="8" height="8" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="15" y="15" width="8" height="8" rx="1.5" fill="white" opacity="0.5"/>
+      </svg>
+      <div>
+        <div class="logo-text">M365 Service Health</div>
+        <div class="logo-sub">Live status dashboard</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="refresh-info">
+        <div class="pulse-dot loading" id="statusDot"></div>
+        <span id="refreshCountdown">Loading…</span>
+      </div>
+      <button class="btn" id="refreshBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Refresh
+      </button>
+      <div class="progress-ring-wrap" id="progressRingWrap">
+        <svg class="progress-ring" width="20" height="20">
+          <circle class="progress-ring-bg" cx="10" cy="10" r="9" stroke-width="2"/>
+          <circle class="progress-ring-circle" id="progressRing" cx="10" cy="10" r="9" stroke-width="2"/>
+        </svg>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="summary-bar">
+      <div class="summary-status">
+        <div class="status-badge loading" id="globalBadge">
+          <span id="globalBadgeText">Loading…</span>
+        </div>
+        <span class="last-updated" id="lastUpdated"></span>
+      </div>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="all">All Services</button>
+      <button class="filter-tab" data-filter="issues">Issues Only</button>
+      <button class="filter-tab" data-filter="Exchange Online">Exchange</button>
+      <button class="filter-tab" data-filter="Microsoft Teams">Teams</button>
+      <button class="filter-tab" data-filter="SharePoint Online">SharePoint</button>
+      <button class="filter-tab" data-filter="OneDrive for Business">OneDrive</button>
+    </div>
+
+    <div id="servicesContainer"></div>
+
+    <div class="incidents-section" id="incidentsSection" style="display:none">
+      <div class="section-title" id="incidentsSectionTitle">Active Issues</div>
+      <div class="incidents-list" id="incidentsList"></div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-text">Data via <a href="https://learn.microsoft.com/en-us/graph/api/resources/service-communications-api-overview" target="_blank">Microsoft Graph Service Communications API</a></div>
+    <div class="footer-text">Auto-refreshes every 60 seconds</div>
+  </footer>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// All API calls go to the local proxy server — no credentials in this file.
+const API = '';  // relative — works on any port/hostname
+
+let allServices = [], allIssues = [];
+let refreshTimer = null, countdownTimer = null, countdownSec = 60;
+let activeFilter = 'all';
+const REFRESH_INTERVAL = 60;
+
+// Theme
+(function() {
+  const pref = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', pref);
+  updateThemeIcon(pref);
+})();
+function updateThemeIcon(t) {
+  const icon = document.getElementById('themeIcon');
+  if (!icon) return;
+  icon.innerHTML = t === 'dark'
+    ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+    : '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  updateThemeIcon(next);
+});
+
+// Fetch from local proxy
+async function fetchHealth() {
+  const res = await fetch(API + '/api/health');
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error || `HTTP ${res.status}`); }
+  return (await res.json()).value || [];
+}
+async function fetchIssues() {
+  const res = await fetch(API + '/api/issues');
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error || `HTTP ${res.status}`); }
+  return (await res.json()).value || [];
+}
+
+async function fetchAndRender() {
+  setDot('loading');
+  showSkeletons();
+  try {
+    const [services, issues] = await Promise.all([fetchHealth(), fetchIssues()]);
+    allServices = services;
+    allIssues = issues;
+    renderAll();
+    document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById('progressRingWrap').style.display = '';
+    setDot('ok');
+  } catch (e) {
+    setDot('error');
+    document.getElementById('servicesContainer').innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">⚠️</div>
+        <div class="state-title">Could not load data</div>
+        <div class="state-desc">${e.message}<br><br>Make sure the server is running and reachable.</div>
+      </div>`;
+    document.getElementById('globalBadge').className = 'status-badge error';
+    document.getElementById('globalBadgeText').textContent = 'Error';
+    showToast('Refresh failed: ' + e.message, 'error');
+  }
+}
+
+function scheduleRefresh() {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownSec = REFRESH_INTERVAL;
+  setProgressRing(REFRESH_INTERVAL, REFRESH_INTERVAL);
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    document.getElementById('refreshCountdown').textContent = `${countdownSec}s`;
+    setProgressRing(countdownSec, REFRESH_INTERVAL);
+    if (countdownSec <= 0) clearInterval(countdownTimer);
+  }, 1000);
+  refreshTimer = setTimeout(async () => { await fetchAndRender(); scheduleRefresh(); }, REFRESH_INTERVAL * 1000);
+}
+
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  if (countdownTimer) clearInterval(countdownTimer);
+  await fetchAndRender();
+  scheduleRefresh();
+});
+
+function setProgressRing(r, t) {
+  document.getElementById('progressRing').style.strokeDashoffset = 56.5 * (1 - r / t);
+  document.getElementById('refreshCountdown').textContent = `${r}s`;
+}
+function setDot(s) {
+  document.getElementById('statusDot').className = 'pulse-dot' + (s === 'error' ? ' error' : s === 'loading' ? ' loading' : '');
+}
+
+// Render
+function renderAll() { renderServices(); renderIncidents(); updateGlobalStatus(); }
+
+const ICONS = {
+  'Exchange':'📧','Teams':'💬','SharePoint':'📁','OneDrive':'☁️',
+  'Microsoft 365':'🧩','Entra':'🔐','Intune':'📱','Power BI':'📈',
+  'Power Automate':'⚡','Power Apps':'🔧','Dynamics':'🏢','Planner':'📋',
+  'Defender':'🛡️','Viva':'🌱','Copilot':'🤖','Forms':'📝','Stream':'🎬',
+};
+function getIcon(n) {
+  for (const [k,v] of Object.entries(ICONS)) if (n.toLowerCase().includes(k.toLowerCase())) return v;
+  return '🔵';
+}
+function statusCls(s) {
+  if (!s) return 'ok';
+  const l = s.toLowerCase();
+  if (l.includes('operational') && !l.includes('non')) return 'ok';
+  if (l.includes('degradation')||l.includes('degraded')||l.includes('advisory')||
+      l.includes('investigating')||l.includes('restoring')||l.includes('restored')||
+      l.includes('reduced')||l.includes('extended')) return 'warning';
+  return 'error';
+}
+function statusLabel(s) {
+  if (!s) return 'Unknown';
+  const m = {
+    serviceoperational:'Operational', investigating:'Investigating',
+    restoringservice:'Restoring', verifyingservice:'Verifying',
+    servicedegradation:'Degraded', serviceinterruption:'Outage',
+    extendedrecovery:'Extended Recovery', falsepositive:'False Positive',
+    investigationsuspended:'Suspended', resolved:'Resolved',
+    postincidentreviewpublished:'PIR Published', servicereduced:'Reduced',
+  };
+  return m[s.toLowerCase()] || s;
+}
+
+function renderServices() {
+  let svcs = allServices;
+  if (activeFilter === 'issues') svcs = svcs.filter(s => statusCls(s.status) !== 'ok');
+  else if (activeFilter !== 'all') svcs = svcs.filter(s => s.service === activeFilter);
+  const container = document.getElementById('servicesContainer');
+  container.innerHTML = '';
+  if (!svcs.length) {
+    container.innerHTML = `<div class="state-box"><div class="state-icon">✅</div><div class="state-title">All services operational</div><div class="state-desc">No issues match the current filter.</div></div>`;
+    return;
+  }
+  const wrap = document.createElement('div');
+  const h = document.createElement('div'); h.className = 'section-title';
+  h.textContent = `Services (${svcs.length})`; wrap.appendChild(h);
+  const grid = document.createElement('div'); grid.className = 'service-grid';
+  svcs.forEach(svc => {
+    const cls = statusCls(svc.status);
+    const card = document.createElement('div');
+    card.className = `service-card${cls !== 'ok' ? ' '+cls : ''}`;
+    card.title = svc.service;
+    card.innerHTML = `
+      <div class="service-icon">${getIcon(svc.service)}</div>
+      <div class="service-info">
+        <div class="service-name">${svc.service}</div>
+        <div class="service-status-text ${cls}">${statusLabel(svc.status)}</div>
+      </div>
+      <div class="service-dot${cls !== 'ok' ? ' '+cls : ''}"></div>`;
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  container.appendChild(wrap);
+}
+
+function renderIncidents() {
+  const section = document.getElementById('incidentsSection');
+  const list = document.getElementById('incidentsList');
+  list.innerHTML = '';
+  let issues = allIssues;
+  if (activeFilter !== 'all' && activeFilter !== 'issues') issues = issues.filter(i => i.service === activeFilter);
+  if (!issues.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  document.getElementById('incidentsSectionTitle').textContent = `Active Issues (${issues.length})`;
+  issues.forEach(issue => {
+    const cls = (issue.classification||'').toLowerCase() === 'incident' ? 'incident' : 'advisory';
+    const modTime = issue.lastModifiedDateTime ? timeSince(new Date(issue.lastModifiedDateTime)) : '—';
+    const startTime = issue.startDateTime ? new Date(issue.startDateTime).toLocaleString() : '—';
+    const posts = (issue.posts||[]).slice().reverse().slice(0,5).map(p => {
+      const txt = p.description?.content ? stripHtml(p.description.content).substring(0,600) : '';
+      return `<div class="update-entry"><div class="update-time">${new Date(p.createdDateTime).toLocaleString()}</div><div class="update-text">${txt}</div></div>`;
+    }).join('');
+    const card = document.createElement('div');
+    card.className = `incident-card ${cls}`;
+    card.innerHTML = `
+      <div class="incident-header" onclick="toggleIncident(this)">
+        <div class="incident-main">
+          <div class="incident-top">
+            <span class="incident-id">${issue.id}</span>
+            <span class="type-pill ${cls}">${cls}</span>
+            <span class="status-pill">${statusLabel(issue.status)}</span>
+          </div>
+          <div class="incident-title">${issue.title||'Untitled Issue'}</div>
+          <div class="incident-service">${issue.service||''}${issue.feature?' · '+issue.feature:''}</div>
+        </div>
+        <div class="incident-meta">
+          <div class="incident-time">Updated ${modTime}</div>
+          <div class="incident-time">Started ${startTime}</div>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="incident-body">
+        ${issue.impactDescription?`<p style="font-size:var(--text-xs);color:var(--color-text);margin-top:var(--space-4)">${issue.impactDescription}</p>`:''}
+        <div class="incident-updates">${posts||'<p style="font-size:var(--text-xs);color:var(--color-text-muted)">No updates yet.</p>'}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function toggleIncident(h) {
+  h.nextElementSibling.classList.toggle('open');
+  h.querySelector('.chevron').classList.toggle('open');
+}
+
+function updateGlobalStatus() {
+  const incidents = allIssues.filter(i => (i.classification||'').toLowerCase()==='incident');
+  const advisories = allIssues.filter(i => (i.classification||'').toLowerCase()==='advisory');
+  const badge = document.getElementById('globalBadge');
+  const text  = document.getElementById('globalBadgeText');
+  if (incidents.length) {
+    badge.className = 'status-badge error';
+    text.textContent = `${incidents.length} Active Incident${incidents.length>1?'s':''}`;
+  } else if (advisories.length) {
+    badge.className = 'status-badge warning';
+    text.textContent = `${advisories.length} Advisory${advisories.length>1?' Issues':''}`;
+  } else {
+    badge.className = 'status-badge ok';
+    text.textContent = 'All Services Operational';
+  }
+}
+
+document.getElementById('filterTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.filter-tab');
+  if (!tab) return;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  activeFilter = tab.dataset.filter;
+  renderAll();
+});
+
+function showSkeletons() {
+  const grid = document.createElement('div'); grid.className = 'service-grid';
+  for (let i = 0; i < 12; i++) {
+    const c = document.createElement('div'); c.className = 'service-card';
+    c.innerHTML = `<div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div>`;
+    grid.appendChild(c);
+  }
+  document.getElementById('servicesContainer').innerHTML = '';
+  document.getElementById('servicesContainer').appendChild(grid);
+}
+
+function timeSince(d) {
+  const m = Math.floor((Date.now()-d)/60000);
+  if (m<1) return 'just now';
+  if (m<60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  return h<24?`${h}h ago`:`${Math.floor(h/24)}d ago`;
+}
+function stripHtml(html) {
+  const d = document.createElement('div'); d.innerHTML = html;
+  return d.textContent||d.innerText||'';
+}
+function showToast(msg, type='success') {
+  const t = document.createElement('div'); t.className=`toast ${type}`; t.textContent=msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(), 4000);
+}
+
+fetchAndRender().then(()=>scheduleRefresh());
+</script>
+</body>
+</html>
