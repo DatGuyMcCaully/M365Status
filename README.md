@@ -3,7 +3,9 @@
 I'm having some issues getting auto approval of the Entra app to work, so you may have to manually grant access via Entra -> App Registration -> App -> API Permissions
 
 It needs Mircosoft Graph
+
 ServiceHealth.Read.ALL
+
 ServiceMessage.Read.All
 
 # M365 Service Health Dashboard
