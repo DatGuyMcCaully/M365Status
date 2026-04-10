@@ -1,3 +1,11 @@
+#Known issue
+
+I'm having some issues getting auto approval of the Entra app to work, so you may have to manually grant access via Entra -> App Registration -> App -> API Permissions
+
+It needs Mircosoft Graph
+ServiceHealth.Read.ALL
+ServiceMessage.Read.All
+
 # M365 Service Health Dashboard
 
 A lightweight, self-hosted dashboard that displays Microsoft 365 service health status and active incidents in real time. Pulls data from the Microsoft Graph API using an Azure app registration — no M365 licenses or user accounts required.
