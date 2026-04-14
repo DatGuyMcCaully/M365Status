@@ -4,6 +4,7 @@
   "tenantId":     "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "clientId":     "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "port":         3000,
+  "subscriptionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 
   "_authOption1": "Client secret (quick setup)",
   "clientSecret": "your-client-secret-here",

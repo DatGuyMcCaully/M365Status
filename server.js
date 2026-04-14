@@ -27,7 +27,7 @@ if (!fs.existsSync(cfgPath)) {
   process.exit(1);
 }
 const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-const { tenantId, clientId, clientSecret, certPath, certKeyPath, thumbprint, port: cfgPort } = cfg;
+const { tenantId, clientId, clientSecret, certPath, certKeyPath, thumbprint, port: cfgPort, subscriptionId } = cfg;
 
 if (!tenantId || !clientId) {
   console.error('ERROR: config.json must contain tenantId and clientId.');
@@ -55,6 +55,10 @@ const PORT = process.env.PORT || cfgPort || 3000;
 // ── Token cache ───────────────────────────────────────────────────────────────
 let cachedToken = null;
 let tokenExpiry = 0;
+
+// ── ARM token cache ───────────────────────────────────────────────────────────
+let cachedArmToken = null;
+let armTokenExpiry = 0;
 
 // ── Certificate JWT assertion (RFC 7523 / MSAL style) ────────────────────────
 function base64urlEncode(buf) {
@@ -147,6 +151,44 @@ async function getToken() {
   return cachedToken;
 }
 
+// ── ARM token acquisition (management.azure.com scope) ───────────────────────
+async function getArmToken() {
+  if (cachedArmToken && Date.now() < armTokenExpiry) return cachedArmToken;
+
+  let body;
+  if (USE_CERT) {
+    const assertion = buildClientAssertion();
+    body = new URLSearchParams({
+      grant_type:            'client_credentials',
+      client_id:             clientId,
+      client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+      client_assertion:      assertion,
+      scope:                 'https://management.azure.com/.default',
+    }).toString();
+  } else {
+    body = new URLSearchParams({
+      grant_type:    'client_credentials',
+      client_id:     clientId,
+      client_secret: clientSecret,
+      scope:         'https://management.azure.com/.default',
+    }).toString();
+  }
+
+  const data = await httpsPost(
+    `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  );
+
+  if (!data.access_token) {
+    throw new Error(data.error_description || data.error || 'Failed to acquire ARM token');
+  }
+
+  cachedArmToken = data.access_token;
+  armTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+  return cachedArmToken;
+}
+
 // ── HTTPS helpers ─────────────────────────────────────────────────────────────
 function httpsPost(url, headers, body) {
   return new Promise((resolve, reject) => {
@@ -179,6 +221,26 @@ function httpsGet(url, headers) {
         try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
         catch(e) { reject(e); }
       });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// ── Raw HTTPS GET (returns string, not parsed JSON) ──────────────────────────
+function httpsGetRaw(url) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const opts = { hostname: u.hostname, path: u.pathname + u.search, method: 'GET',
+      headers: { 'User-Agent': 'M365-Dashboard/1.0', 'Accept': 'application/rss+xml, application/xml, text/xml' } };
+    const req = https.request(opts, res => {
+      // Follow one redirect
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return httpsGetRaw(res.headers.location).then(resolve).catch(reject);
+      }
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => resolve(raw));
     });
     req.on('error', reject);
     req.end();
@@ -238,6 +300,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));
     } catch (e) {
+      console.error('[/api/health]', e.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
     }
@@ -252,6 +315,132 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));
     } catch (e) {
+      console.error('[/api/issues]', e.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (url === '/api/m365-history') {
+    try {
+      const params = new URL('http://localhost' + req.url).searchParams;
+      const days = Math.min(Math.max(parseInt(params.get('days') || '30', 10), 1), 180);
+      const since = new Date(Date.now() - days * 86400000).toISOString();
+      const qs = encodeURIComponent(`isResolved eq true and lastModifiedDateTime ge ${since}`);
+      const data = await graphGet(
+        `/admin/serviceAnnouncement/issues?$filter=${qs}&$orderby=lastModifiedDateTime desc&$top=100`
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (url === '/api/azure-history') {
+    try {
+      if (!subscriptionId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'subscriptionId not set in config.json' }));
+        return;
+      }
+      const params = new URL('http://localhost' + req.url).searchParams;
+      const days = Math.min(Math.max(parseInt(params.get('days') || '30', 10), 1), 180);
+      const since = new Date(Date.now() - days * 86400000);
+      const token = await getArmToken();
+
+      const result = await httpsGet(
+        `https://management.azure.com/subscriptions/${subscriptionId}/providers/Microsoft.ResourceHealth/events?api-version=2022-10-01`,
+        { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+      );
+
+      if (result.body.error) throw new Error(result.body.error.message || JSON.stringify(result.body.error));
+
+      const allEvents = result.body.value || [];
+      // Filter to resolved/mitigated events within the date range
+      const filtered = allEvents.filter(e => {
+        const p = e.properties || {};
+        const status = (p.status || '').toLowerCase();
+        const mitTime = p.impactMitigationTime ? new Date(p.impactMitigationTime) : null;
+        const isResolved = status === 'resolved' || status === 'mitigated';
+        return isResolved && mitTime && mitTime >= since;
+      });
+
+      // Normalize to consistent shape
+      const data = filtered.map(e => {
+        const p = e.properties || {};
+        return {
+          trackingId:      p.trackingId || e.name,
+          title:           p.title || '',
+          summary:         p.summary || '',
+          header:          p.header || '',
+          eventType:       p.eventType || '',
+          status:          p.status || '',
+          impactStartTime: p.impactStartTime || null,
+          lastUpdateTime:  p.lastUpdateTime || null,
+          mitigationTime:  p.impactMitigationTime || null,
+          impact:          p.impact || [],
+          level:           p.level || '',
+        };
+      }).sort((a, b) => new Date(b.mitigationTime) - new Date(a.mitigationTime));
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data, count: data.length }));
+    } catch (e) {
+      console.error('[/api/azure-history]', e.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  if (url === '/api/azure-status') {
+    try {
+      if (!subscriptionId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'subscriptionId not set in config.json' }));
+        return;
+      }
+      const token = await getArmToken();
+
+      const result = await httpsGet(
+        `https://management.azure.com/subscriptions/${subscriptionId}/providers/Microsoft.ResourceHealth/events?api-version=2022-10-01`,
+        { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+      );
+
+      if (result.body.error) throw new Error(result.body.error.message || JSON.stringify(result.body.error));
+
+      const allEvents = result.body.value || [];
+      // Only active events
+      const active = allEvents.filter(e => {
+        const status = ((e.properties || {}).status || '').toLowerCase();
+        return status === 'active';
+      });
+
+      const data = active.map(e => {
+        const p = e.properties || {};
+        return {
+          trackingId:      p.trackingId || e.name,
+          title:           p.title || '',
+          summary:         p.summary || '',
+          header:          p.header || '',
+          eventType:       p.eventType || '',
+          status:          p.status || '',
+          impactStartTime: p.impactStartTime || null,
+          lastUpdateTime:  p.lastUpdateTime || null,
+          mitigationTime:  p.impactMitigationTime || null,
+          impact:          p.impact || [],
+          level:           p.level || '',
+        };
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data, count: data.length }));
+    } catch (e) {
+      console.error('[/api/azure-status]', e.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
     }

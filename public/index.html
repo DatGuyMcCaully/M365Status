@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>M365 Service Health</title>
+  <title>M365 &amp; Azure Service Health</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -32,6 +32,8 @@
       --color-text-faint:  #484f58;
       --color-primary:     #388bfd;
       --color-primary-dim: #1f3f6e;
+      --color-azure:       #0078d4;
+      --color-azure-dim:   #0d2a4a;
       --color-success:     #3fb950;
       --color-success-dim: #1a3d24;
       --color-warning:     #d29922;
@@ -52,6 +54,8 @@
       --color-text-faint:  #9198a1;
       --color-primary:     #0969da;
       --color-primary-dim: #ddf4ff;
+      --color-azure:       #0078d4;
+      --color-azure-dim:   #e8f4ff;
       --color-success:     #1a7f37;
       --color-success-dim: #dafbe1;
       --color-warning:     #9a6700;
@@ -84,8 +88,19 @@
     .theme-toggle { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text-muted); }
     .theme-toggle:hover { color: var(--color-text); border-color: var(--color-text-muted); }
 
+    /* Page tabs */
+    .page-tabs { display: flex; gap: 0; background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 0 var(--space-6); }
+    .page-tab { padding: var(--space-3) var(--space-5); font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; align-items: center; gap: var(--space-2); transition: color var(--transition), border-color var(--transition); }
+    .page-tab:hover { color: var(--color-text); }
+    .page-tab.active { color: var(--color-text); border-bottom-color: var(--color-primary); }
+    .page-tab.azure.active { border-bottom-color: var(--color-azure); }
+    .tab-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 9999px; background: var(--color-error-dim); color: var(--color-error); display: none; }
+    .tab-badge.show { display: inline-flex; }
+
     /* Main */
     .main { padding: var(--space-6); max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
+    .page-view { display: none; }
+    .page-view.active { display: block; }
 
     /* Summary */
     .summary-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-6); }
@@ -94,6 +109,7 @@
     .status-badge.ok      { background: var(--color-success-dim); color: var(--color-success); }
     .status-badge.warning { background: var(--color-warning-dim); color: var(--color-warning); }
     .status-badge.error   { background: var(--color-error-dim);   color: var(--color-error); }
+    .status-badge.azure   { background: var(--color-azure-dim);   color: var(--color-azure); }
     .status-badge.loading { background: var(--color-surface-2);   color: var(--color-text-muted); border: 1px solid var(--color-border); }
     .last-updated { font-size: var(--text-xs); color: var(--color-text-faint); font-family: var(--font-mono); }
 
@@ -134,6 +150,7 @@
     .incident-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
     .incident-card.incident { border-left: 3px solid var(--color-error); }
     .incident-card.advisory { border-left: 3px solid var(--color-warning); }
+    .incident-card.azure-incident { border-left: 3px solid var(--color-azure); }
     .incident-header { display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-4) var(--space-5); gap: var(--space-4); cursor: pointer; }
     .incident-header:hover { background: var(--color-surface-2); }
     .incident-main { flex: 1; min-width: 0; }
@@ -142,6 +159,7 @@
     .type-pill { font-size: var(--text-xs); font-weight: 600; padding: 1px var(--space-2); border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.04em; }
     .type-pill.incident { background: var(--color-error-dim); color: var(--color-error); }
     .type-pill.advisory { background: var(--color-warning-dim); color: var(--color-warning); }
+    .type-pill.azure-incident { background: var(--color-azure-dim); color: var(--color-azure); }
     .status-pill { font-size: var(--text-xs); font-weight: 500; padding: 1px var(--space-2); border-radius: 9999px; background: var(--color-surface-2); color: var(--color-text-muted); border: 1px solid var(--color-border); }
     .incident-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); line-height: 1.35; }
     .incident-service { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-1); }
@@ -156,6 +174,15 @@
     .update-entry:last-child { border-bottom: none; }
     .update-time { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); flex-shrink: 0; width: 140px; padding-top: 2px; }
     .update-text { font-size: var(--text-xs); color: var(--color-text); line-height: 1.6; }
+
+    /* Azure status items */
+    .azure-item { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); border-left: 3px solid var(--color-azure); }
+    .azure-item-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-1); }
+    .azure-item-title a { color: inherit; text-decoration: none; }
+    .azure-item-title a:hover { color: var(--color-azure); }
+    .azure-item-meta { font-size: var(--text-xs); color: var(--color-text-muted); font-family: var(--font-mono); margin-bottom: var(--space-2); }
+    .azure-item-desc { font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.6; }
+    .azure-ok-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-10); text-align: center; }
 
     /* States */
     .state-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-10); text-align: center; }
@@ -178,11 +205,33 @@
     .toast.success { border-left: 3px solid var(--color-success); }
     .toast.error   { border-left: 3px solid var(--color-error); }
 
+    /* History tab */
+    .history-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-6); }
+    .range-btns { display: flex; gap: var(--space-1); }
+    .range-btn { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 500; color: var(--color-text-muted); border: 1px solid transparent; background: transparent; }
+    .range-btn:hover { color: var(--color-text); background: var(--color-surface); }
+    .range-btn.active { color: var(--color-text); background: var(--color-surface); border-color: var(--color-border); }
+    .history-source-filter { display: flex; gap: var(--space-1); }
+    .source-btn { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 500; color: var(--color-text-muted); border: 1px solid var(--color-border); background: var(--color-surface-2); }
+    .source-btn:hover { color: var(--color-text); }
+    .source-btn.active { background: var(--color-surface); color: var(--color-text); }
+    .history-timeline { display: flex; flex-direction: column; gap: var(--space-3); }
+    .history-date-group { margin-bottom: var(--space-2); }
+    .history-date-header { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--color-text-muted); margin-bottom: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-divider); }
+    .source-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 9999px; margin-left: var(--space-1); }
+    .source-badge.m365 { background: var(--color-primary-dim); color: var(--color-primary); }
+    .source-badge.azure { background: var(--color-azure-dim); color: var(--color-azure); }
+    .resolved-pill { font-size: var(--text-xs); font-weight: 500; padding: 1px var(--space-2); border-radius: 9999px; background: var(--color-success-dim); color: var(--color-success); border: 1px solid transparent; }
+    .history-empty { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-10); text-align: center; }
+    .history-loading { display: flex; flex-direction: column; gap: var(--space-3); }
+
     @media (max-width: 640px) {
       .main { padding: var(--space-4); }
       .header { padding: var(--space-3) var(--space-4); }
       .service-grid { grid-template-columns: 1fr 1fr; }
       .incident-meta { display: none; }
+      .page-tabs { padding: 0 var(--space-3); }
+      .page-tab { padding: var(--space-3) var(--space-3); }
     }
   </style>
 </head>
@@ -190,7 +239,7 @@
 <div class="app">
   <header class="header">
     <div class="logo">
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="M365 Status">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="Status">
         <rect width="28" height="28" rx="6" fill="var(--color-primary)"/>
         <rect x="5" y="5" width="8" height="8" rx="1.5" fill="white" opacity="0.95"/>
         <rect x="15" y="5" width="8" height="8" rx="1.5" fill="white" opacity="0.7"/>
@@ -198,8 +247,8 @@
         <rect x="15" y="15" width="8" height="8" rx="1.5" fill="white" opacity="0.5"/>
       </svg>
       <div>
-        <div class="logo-text">M365 Service Health</div>
-        <div class="logo-sub">Live status dashboard</div>
+        <div class="logo-text">Service Health</div>
+        <div class="logo-sub">M365 &amp; Azure live status</div>
       </div>
     </div>
     <div class="header-right">
@@ -227,47 +276,107 @@
     </div>
   </header>
 
+  <!-- Page tabs -->
+  <nav class="page-tabs">
+    <button class="page-tab active" data-page="m365">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Microsoft 365
+      <span class="tab-badge" id="m365Badge">0</span>
+    </button>
+    <button class="page-tab azure" data-page="azure">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      Azure
+      <span class="tab-badge" id="azureBadge">0</span>
+    </button>
+    <button class="page-tab" data-page="history">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </button>
+  </nav>
+
   <main class="main">
-    <div class="summary-bar">
-      <div class="summary-status">
-        <div class="status-badge loading" id="globalBadge">
-          <span id="globalBadgeText">Loading…</span>
+
+    <!-- M365 View -->
+    <div class="page-view active" id="view-m365">
+      <div class="summary-bar">
+        <div class="summary-status">
+          <div class="status-badge loading" id="globalBadge"><span id="globalBadgeText">Loading…</span></div>
+          <span class="last-updated" id="lastUpdated"></span>
         </div>
-        <span class="last-updated" id="lastUpdated"></span>
+      </div>
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" data-filter="all">All Services</button>
+        <button class="filter-tab" data-filter="issues">Issues Only</button>
+        <button class="filter-tab" data-filter="Exchange Online">Exchange</button>
+        <button class="filter-tab" data-filter="Microsoft Teams">Teams</button>
+        <button class="filter-tab" data-filter="SharePoint Online">SharePoint</button>
+        <button class="filter-tab" data-filter="OneDrive for Business">OneDrive</button>
+      </div>
+      <div id="servicesContainer"></div>
+      <div class="incidents-section" id="incidentsSection" style="display:none">
+        <div class="section-title" id="incidentsSectionTitle">Active Issues</div>
+        <div class="incidents-list" id="incidentsList"></div>
       </div>
     </div>
 
-    <div class="filter-tabs" id="filterTabs">
-      <button class="filter-tab active" data-filter="all">All Services</button>
-      <button class="filter-tab" data-filter="issues">Issues Only</button>
-      <button class="filter-tab" data-filter="Exchange Online">Exchange</button>
-      <button class="filter-tab" data-filter="Microsoft Teams">Teams</button>
-      <button class="filter-tab" data-filter="SharePoint Online">SharePoint</button>
-      <button class="filter-tab" data-filter="OneDrive for Business">OneDrive</button>
+    <!-- Azure View -->
+    <div class="page-view" id="view-azure">
+      <div class="summary-bar">
+        <div class="summary-status">
+          <div class="status-badge loading" id="azureGlobalBadge"><span id="azureGlobalBadgeText">Loading…</span></div>
+          <span class="last-updated" id="azureLastUpdated"></span>
+        </div>
+      </div>
+      <div id="azureContainer">
+        <div class="service-grid">
+          <div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>
+          <div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>
+          <div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>
+        </div>
+      </div>
     </div>
 
-    <div id="servicesContainer"></div>
-
-    <div class="incidents-section" id="incidentsSection" style="display:none">
-      <div class="section-title" id="incidentsSectionTitle">Active Issues</div>
-      <div class="incidents-list" id="incidentsList"></div>
+    <!-- History View -->
+    <div class="page-view" id="view-history">
+      <div class="history-controls">
+        <div class="range-btns" id="rangeBtns">
+          <button class="range-btn" data-days="7">7 days</button>
+          <button class="range-btn active" data-days="30">30 days</button>
+          <button class="range-btn" data-days="60">60 days</button>
+          <button class="range-btn" data-days="90">90 days</button>
+        </div>
+        <div class="history-source-filter" id="sourceFilter">
+          <button class="source-btn active" data-source="all">All Sources</button>
+          <button class="source-btn" data-source="m365">M365 Only</button>
+          <button class="source-btn" data-source="azure">Azure Only</button>
+        </div>
+      </div>
+      <div id="historyContainer">
+        <div class="history-loading">
+          <div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>
+          <div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>
+          <div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>
+        </div>
+      </div>
     </div>
+
   </main>
 
   <footer class="footer">
-    <div class="footer-text">Data via <a href="https://learn.microsoft.com/en-us/graph/api/resources/service-communications-api-overview" target="_blank">Microsoft Graph Service Communications API</a></div>
+    <div class="footer-text">M365 via <a href="https://learn.microsoft.com/en-us/graph/api/resources/service-communications-api-overview" target="_blank">Microsoft Graph</a> &nbsp;·&nbsp; Azure via <a href="https://azure.status.microsoft" target="_blank">azure.status.microsoft</a></div>
     <div class="footer-text">Auto-refreshes every 60 seconds</div>
   </footer>
 </div>
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// All API calls go to the local proxy server — no credentials in this file.
-const API = '';  // relative — works on any port/hostname
+// All M365 API calls go to the local proxy server — no credentials in this file.
+const API = '';
 
-let allServices = [], allIssues = [];
+let allServices = [], allIssues = [], azureItems = [];
 let refreshTimer = null, countdownTimer = null, countdownSec = 60;
 let activeFilter = 'all';
+let activePage = 'm365';
 const REFRESH_INTERVAL = 60;
 
 // Theme
@@ -290,7 +399,18 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   updateThemeIcon(next);
 });
 
-// Fetch from local proxy
+// Page tabs
+document.querySelectorAll('.page-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activePage = tab.dataset.page;
+    document.querySelectorAll('.page-view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + activePage).classList.add('active');
+  });
+});
+
+// M365 fetches
 async function fetchHealth() {
   const res = await fetch(API + '/api/health');
   if (!res.ok) { const e = await res.json(); throw new Error(e.error || `HTTP ${res.status}`); }
@@ -302,15 +422,29 @@ async function fetchIssues() {
   return (await res.json()).value || [];
 }
 
+// Azure status fetch (Azure Resource Graph)
+async function fetchAzureStatus() {
+  const res = await fetch(API + '/api/azure-status');
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error || `HTTP ${res.status}`); }
+  return await res.json();
+}
+
 async function fetchAndRender() {
   setDot('loading');
   showSkeletons();
   try {
-    const [services, issues] = await Promise.all([fetchHealth(), fetchIssues()]);
+    const [services, issues, azureData] = await Promise.all([
+      fetchHealth(),
+      fetchIssues(),
+      fetchAzureStatus(),
+    ]);
     allServices = services;
     allIssues = issues;
+    azureItems = azureData.data || [];
     renderAll();
-    document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('lastUpdated').textContent = `Updated ${now}`;
+    document.getElementById('azureLastUpdated').textContent = `Updated ${now}`;
     document.getElementById('progressRingWrap').style.display = '';
     setDot('ok');
   } catch (e) {
@@ -356,8 +490,7 @@ function setDot(s) {
   document.getElementById('statusDot').className = 'pulse-dot' + (s === 'error' ? ' error' : s === 'loading' ? ' loading' : '');
 }
 
-// Render
-function renderAll() { renderServices(); renderIncidents(); updateGlobalStatus(); }
+function renderAll() { renderServices(); renderIncidents(); updateGlobalStatus(); renderAzure(); }
 
 const ICONS = {
   'Exchange':'📧','Teams':'💬','SharePoint':'📁','OneDrive':'☁️',
@@ -467,6 +600,138 @@ function renderIncidents() {
   });
 }
 
+function renderAzure() {
+  const container = document.getElementById('azureContainer');
+  const badge = document.getElementById('azureGlobalBadge');
+  const badgeText = document.getElementById('azureGlobalBadgeText');
+  const tabBadge = document.getElementById('azureBadge');
+
+  // Update M365 badge
+  const m365Count = allIssues.filter(i => (i.classification||'').toLowerCase() === 'incident').length;
+  const m365Badge = document.getElementById('m365Badge');
+  if (m365Count > 0) { m365Badge.textContent = m365Count; m365Badge.classList.add('show'); }
+  else { m365Badge.classList.remove('show'); }
+
+  if (!azureItems.length) {
+    container.innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">✅</div>
+        <div class="state-title">No active Azure events</div>
+        <div class="state-desc">No active service issues, maintenance, or advisories for your subscription.</div>
+      </div>`;
+    badge.className = 'status-badge ok';
+    badgeText.textContent = 'All Systems Operational';
+    tabBadge.classList.remove('show');
+    return;
+  }
+
+  // Bucket by event type
+  const issues      = azureItems.filter(i => i.eventType === 'ServiceIssue');
+  const maintenance = azureItems.filter(i => i.eventType === 'PlannedMaintenance');
+  const advisories  = azureItems.filter(i => i.eventType === 'HealthAdvisory');
+  const security    = azureItems.filter(i => i.eventType === 'SecurityAdvisory');
+
+  // Badge
+  if (issues.length) {
+    badge.className = 'status-badge error';
+    badgeText.textContent = `${issues.length} Active Outage${issues.length > 1 ? 's' : ''}`;
+    tabBadge.textContent = issues.length;
+    tabBadge.classList.add('show');
+  } else if (security.length) {
+    badge.className = 'status-badge error';
+    badgeText.textContent = `${security.length} Security Advisory`;
+    tabBadge.textContent = security.length;
+    tabBadge.classList.add('show');
+  } else if (maintenance.length || advisories.length) {
+    badge.className = 'status-badge warning';
+    badgeText.textContent = `${maintenance.length + advisories.length} Event${maintenance.length + advisories.length > 1 ? 's' : ''}`;
+    tabBadge.classList.remove('show');
+  } else {
+    badge.className = 'status-badge ok';
+    badgeText.textContent = 'All Systems Operational';
+    tabBadge.classList.remove('show');
+  }
+
+  const wrap = document.createElement('div');
+
+  function renderSection(items, label, cardClass, pillClass, pillLabel) {
+    if (!items.length) return;
+    const h = document.createElement('div'); h.className = 'section-title';
+    h.textContent = `${label} (${items.length})`; wrap.appendChild(h);
+    const list = document.createElement('div'); list.className = 'incidents-list'; list.style.marginBottom = 'var(--space-8)';
+    items.forEach(item => {
+      const startTime = item.impactStartTime ? new Date(item.impactStartTime).toLocaleString() : '—';
+      const updateTime = item.lastUpdateTime ? timeSince(new Date(item.lastUpdateTime)) : '—';
+      const mitigTime = item.mitigationTime ? new Date(item.mitigationTime).toLocaleString() : '—';
+
+      // Parse impacted services from impact array
+      let impactedServices = '';
+      try {
+        const impacts = Array.isArray(item.impact) ? item.impact : JSON.parse(item.impact || '[]');
+        impactedServices = impacts.map(i => i.ImpactedService || i.impactedService || '').filter(Boolean).join(', ');
+      } catch(e) {}
+
+      // Parse impacted regions
+      let regions = '';
+      try {
+        const impacts = Array.isArray(item.impact) ? item.impact : JSON.parse(item.impact || '[]');
+        const regionSet = new Set();
+        impacts.forEach(i => {
+          const rList = i.ImpactedRegions || i.impactedRegions || [];
+          (Array.isArray(rList) ? rList : [rList]).forEach(r => {
+            const name = r.RegionName || r.regionName || r;
+            if (name) regionSet.add(name);
+          });
+        });
+        regions = [...regionSet].slice(0, 6).join(', ');
+      } catch(e) {}
+
+      const card = document.createElement('div');
+      card.className = `incident-card ${cardClass}`;
+      card.innerHTML = `
+        <div class="incident-header" onclick="toggleIncident(this)">
+          <div class="incident-main">
+            <div class="incident-top">
+              <span class="incident-id">${item.trackingId || '—'}</span>
+              <span class="type-pill ${pillClass}">${pillLabel}</span>
+              ${item.level ? `<span class="status-pill">${item.level}</span>` : ''}
+              ${item.priority ? `<span class="status-pill">P${item.priority}</span>` : ''}
+            </div>
+            <div class="incident-title">${item.title || 'Untitled'}</div>
+            ${impactedServices ? `<div class="incident-service">${impactedServices}</div>` : ''}
+            ${regions ? `<div class="incident-service" style="color:var(--color-text-faint)">📍 ${regions}</div>` : ''}
+          </div>
+          <div class="incident-meta">
+            <div class="incident-time">Updated ${updateTime}</div>
+            <div class="incident-time">Started ${startTime}</div>
+            ${item.eventType === 'PlannedMaintenance' ? `<div class="incident-time">Ends ${mitigTime}</div>` : ''}
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="incident-body">
+          ${item.summary ? `<p style="font-size:var(--text-xs);color:var(--color-text);margin-top:var(--space-4);line-height:1.6">${item.summary}</p>` : ''}
+          ${item.header ? `<p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3);line-height:1.6">${item.header}</p>` : ''}
+          <div style="margin-top:var(--space-4);display:flex;gap:var(--space-3);flex-wrap:wrap">
+            <a href="https://app.azure.com/h/${item.trackingId}" target="_blank" rel="noopener"
+               style="font-size:var(--text-xs);color:var(--color-azure);text-decoration:none">
+              View in Azure Portal →
+            </a>
+          </div>
+        </div>`;
+      list.appendChild(card);
+    });
+    wrap.appendChild(list);
+  }
+
+  renderSection(issues,      'Active Outages',       'incident',       'incident',       'Outage');
+  renderSection(security,    'Security Advisories',  'incident',       'incident',       'Security');
+  renderSection(maintenance, 'Planned Maintenance',  'advisory',       'advisory',       'Maintenance');
+  renderSection(advisories,  'Health Advisories',    'advisory',       'advisory',       'Advisory');
+
+  container.innerHTML = '';
+  container.appendChild(wrap);
+}
+
 function toggleIncident(h) {
   h.nextElementSibling.classList.toggle('open');
   h.querySelector('.chevron').classList.toggle('open');
@@ -527,6 +792,227 @@ function showToast(msg, type='success') {
 }
 
 fetchAndRender().then(()=>scheduleRefresh());
+
+// ── History Tab ────────────────────────────────────────────────────────────────
+let historyDays = 30;
+let historySource = 'all';  // 'all' | 'm365' | 'azure'
+let historyLoaded = false;
+
+// Lazy-load history when the tab is first opened
+document.querySelectorAll('.page-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.page === 'history' && !historyLoaded) {
+      historyLoaded = true;
+      loadHistory();
+    }
+  });
+});
+
+document.getElementById('rangeBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.range-btn');
+  if (!btn) return;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  historyDays = parseInt(btn.dataset.days, 10);
+  loadHistory();
+});
+
+document.getElementById('sourceFilter').addEventListener('click', e => {
+  const btn = e.target.closest('.source-btn');
+  if (!btn) return;
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  historySource = btn.dataset.source;
+  renderHistory(window._historyM365 || [], window._historyAzure || []);
+});
+
+async function loadHistory() {
+  const container = document.getElementById('historyContainer');
+  container.innerHTML = `<div class="history-loading">
+    ${'<div class="service-card"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="height:12px;width:80%;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:55%"></div></div></div>'.repeat(5)}
+  </div>`;
+
+  try {
+    const [m365Res, azureRes] = await Promise.all([
+      fetch(API + `/api/m365-history?days=${historyDays}`).then(r => r.json()),
+      fetch(API + `/api/azure-history?days=${historyDays}`).then(r => r.json()),
+    ]);
+
+    const m365Items  = (m365Res.value || []);
+    const azureItems = (azureRes.data  || []);
+
+    window._historyM365  = m365Items;
+    window._historyAzure = azureItems;
+
+    renderHistory(m365Items, azureItems);
+  } catch(e) {
+    container.innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">⚠️</div>
+        <div class="state-title">Could not load history</div>
+        <div class="state-desc">${e.message}</div>
+      </div>`;
+  }
+}
+
+function renderHistory(m365Items, azureItems) {
+  const container = document.getElementById('historyContainer');
+
+  // Build unified list
+  const combined = [];
+
+  if (historySource !== 'azure') {
+    m365Items.forEach(issue => {
+      const sortDate = issue.lastModifiedDateTime || issue.startDateTime;
+      combined.push({
+        source: 'm365',
+        sortDate,
+        id:       issue.id,
+        title:    issue.title || 'Untitled Issue',
+        service:  issue.service || '',
+        feature:  issue.feature || '',
+        cls:      (issue.classification||'').toLowerCase() === 'incident' ? 'incident' : 'advisory',
+        status:   statusLabel(issue.status),
+        startTime: issue.startDateTime ? new Date(issue.startDateTime).toLocaleString() : '—',
+        resolvedTime: issue.lastModifiedDateTime ? new Date(issue.lastModifiedDateTime).toLocaleString() : '—',
+        posts: (issue.posts || []).slice().reverse().slice(0, 3).map(p => ({
+          time: new Date(p.createdDateTime).toLocaleString(),
+          text: p.description?.content ? stripHtml(p.description.content).substring(0, 400) : ''
+        })),
+        impactDescription: issue.impactDescription || '',
+      });
+    });
+  }
+
+  if (historySource !== 'm365') {
+    azureItems.forEach(item => {
+      const sortDate = item.mitigationTime || item.lastUpdateTime || item.impactStartTime;
+      let impactedServices = '';
+      let regions = '';
+      try {
+        const impacts = Array.isArray(item.impact) ? item.impact : JSON.parse(item.impact || '[]');
+        impactedServices = impacts.map(i => i.ImpactedService || i.impactedService || '').filter(Boolean).join(', ');
+        const regionSet = new Set();
+        impacts.forEach(i => {
+          const rList = i.ImpactedRegions || i.impactedRegions || [];
+          (Array.isArray(rList) ? rList : [rList]).forEach(r => {
+            const name = r.RegionName || r.regionName || r;
+            if (name) regionSet.add(name);
+          });
+        });
+        regions = [...regionSet].slice(0, 6).join(', ');
+      } catch(e) {}
+
+      combined.push({
+        source: 'azure',
+        sortDate,
+        id:       item.trackingId || '—',
+        title:    item.title || 'Untitled',
+        service:  impactedServices,
+        feature:  regions ? '📍 ' + regions : '',
+        cls:      item.eventType === 'ServiceIssue' ? 'incident' : 'advisory',
+        status:   item.status || 'Resolved',
+        startTime: item.impactStartTime ? new Date(item.impactStartTime).toLocaleString() : '—',
+        resolvedTime: item.mitigationTime ? new Date(item.mitigationTime).toLocaleString() : '—',
+        eventType: item.eventType,
+        summary: item.summary || '',
+        header: item.header || '',
+        posts: [],
+        impactDescription: '',
+      });
+    });
+  }
+
+  // Sort newest first
+  combined.sort((a, b) => new Date(b.sortDate) - new Date(a.sortDate));
+
+  if (!combined.length) {
+    container.innerHTML = `
+      <div class="history-empty">
+        <div class="state-icon">📋</div>
+        <div class="state-title" style="font-size:var(--text-sm);font-weight:600;margin-top:var(--space-3)">No resolved incidents found</div>
+        <div class="state-desc" style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2)">
+          No resolved events found in the last ${historyDays} days for the selected source.
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Group by calendar date
+  const groups = {};
+  combined.forEach(item => {
+    const d = item.sortDate ? new Date(item.sortDate) : new Date(0);
+    const label = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(item);
+  });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'history-timeline';
+
+  Object.entries(groups).forEach(([dateLabel, items]) => {
+    const group = document.createElement('div');
+    group.className = 'history-date-group';
+    group.innerHTML = `<div class="history-date-header">${dateLabel} <span style="color:var(--color-text-faint);font-weight:400">(${items.length})</span></div>`;
+
+    const list = document.createElement('div');
+    list.className = 'incidents-list';
+    list.style.marginBottom = 'var(--space-4)';
+
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = `incident-card ${item.cls}`;
+
+      const updates = item.posts.map(p =>
+        `<div class="update-entry"><div class="update-time">${p.time}</div><div class="update-text">${p.text}</div></div>`
+      ).join('');
+
+      const sourceLabel = item.source === 'm365' ? 'M365' : 'Azure';
+      const azurePortalLink = item.source === 'azure'
+        ? `<a href="https://app.azure.com/h/${item.id}" target="_blank" rel="noopener"
+             style="font-size:var(--text-xs);color:var(--color-azure);text-decoration:none;display:inline-block;margin-top:var(--space-3)">
+             View in Azure Portal →
+           </a>`
+        : '';
+
+      const bodyContent = [
+        item.impactDescription ? `<p style="font-size:var(--text-xs);color:var(--color-text);margin-top:var(--space-4);line-height:1.6">${item.impactDescription}</p>` : '',
+        item.summary           ? `<p style="font-size:var(--text-xs);color:var(--color-text);margin-top:var(--space-4);line-height:1.6">${item.summary}</p>` : '',
+        item.header            ? `<p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3);line-height:1.6">${item.header}</p>` : '',
+        updates ? `<div class="incident-updates">${updates}</div>` : '',
+        azurePortalLink,
+      ].filter(Boolean).join('') || `<p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-4)">No additional details.</p>`;
+
+      card.innerHTML = `
+        <div class="incident-header" onclick="toggleIncident(this)">
+          <div class="incident-main">
+            <div class="incident-top">
+              <span class="incident-id">${item.id}</span>
+              <span class="type-pill ${item.cls}">${item.cls}</span>
+              <span class="resolved-pill">Resolved</span>
+              <span class="source-badge ${item.source}">${sourceLabel}</span>
+            </div>
+            <div class="incident-title">${item.title}</div>
+            ${item.service ? `<div class="incident-service">${item.service}${item.feature ? ' · ' + item.feature : ''}</div>` : ''}
+          </div>
+          <div class="incident-meta">
+            <div class="incident-time">Resolved ${item.resolvedTime}</div>
+            <div class="incident-time">Started ${item.startTime}</div>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="incident-body">${bodyContent}</div>`;
+
+      list.appendChild(card);
+    });
+
+    group.appendChild(list);
+    wrap.appendChild(group);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(wrap);
+}
 </script>
 </body>
 </html>
