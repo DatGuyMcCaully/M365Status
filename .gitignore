@@ -1,7 +1,0 @@
-config.json
-certs/
-*.key
-*.pem
-*.pfx
-node_modules/
-.env
